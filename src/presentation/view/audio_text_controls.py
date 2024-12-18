@@ -6,6 +6,10 @@ from PySide6.QtCore import Slot
     
 from infrastructure.audio_to_text import AudioText
 
+from pubsub import pub
+
+import logging
+
 class AudioTextControls(QWidget):
     """
     classdocs
@@ -28,6 +32,10 @@ class AudioTextControls(QWidget):
         self.layout.addWidget(self._progress_bar)
         
         self.setLayout(self.layout)
+        
+        self.pub = pub
+        self.pub.subscribe(self.update_progress_bar, "whisper_transcribe")
+
         
     def class_name(self, o):
         return o.metaObject().className()
@@ -62,7 +70,7 @@ class AudioTextControls(QWidget):
         Open a file dialog and start processing the selected file.
         """
         file_name, _ = QFileDialog.getOpenFileName(
-            self,
+            None,
             "Open Audio File",
             "",
             "Audio Files (*.mp3 *.mp4 *.wav *.flac *.ogg);;All Files (*)"
@@ -70,6 +78,9 @@ class AudioTextControls(QWidget):
 
         if file_name:
             self.audio_to_text.start_task(file_name)
+            #results = self.audio_to_text.process_file(file_name)
+            
+        #return results
     
     def update_log(self, message):
         """
@@ -78,10 +89,12 @@ class AudioTextControls(QWidget):
         self.plain_textedit.appendPlainText(message)
 
     @Slot()
-    def update_progress_bar(self, value):
+    def update_progress_bar(self, progress):
         """
         Update the progress bar with the given value.
         """
+        logging.info("Update Progress Bar Called")
+        
         cur_val = self._progress_bar.value()
         max_val = self._progress_bar.maximum()
 

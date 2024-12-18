@@ -1,4 +1,3 @@
-
 import whisper
 from datetime import datetime
 import logging
@@ -6,10 +5,11 @@ import logging
 from infrastructure.thread_worker import ThreadWorker
 
 
-class AudioText():
+class AudioText:
     """
+    Class for processing audio files and converting them to text using Whisper.
     """
-    
+
     def __init__(self, result_callback=None, log_callback=None):
         super().__init__()
 
@@ -17,8 +17,17 @@ class AudioText():
         self.__progress_callback = None
         self.__log_callback = log_callback
 
-        # Whisper Model
-        self.model = whisper.load_model("turbo")
+        print("Initializing audio_to_text...")
+        try:
+            # Correct model name (e.g., 'base' instead of 'turbo')
+            self.model = whisper.load_model("base")
+        except AttributeError as e:
+            print(f"Error: {e}")
+            print("Whisper module not found or incorrect import?")
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            print("Initialization complete.")
 
         # Placeholder for the worker
         self.worker = None
@@ -27,9 +36,12 @@ class AudioText():
         """
         Process the selected audio file using Whisper.
         """
-        #self.update_log("Processing audio...")
-        result = self.model.transcribe(audio=file_name, verbose=False)
-        return file_name, result['text']
+        try:
+            result = self.model.transcribe(audio=file_name, verbose=False)
+            return file_name, result['text']
+        except Exception as e:
+            logging.error(f"Error processing file: {e}")
+            return file_name, f"Error: {e}"
 
     def save_results(self, result_data):
         """
@@ -41,7 +53,8 @@ class AudioText():
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         text_file_name = f"{file_name.rsplit('.', 1)[0]}_{timestamp}.txt"
 
-        self.worker.log(f"Loading file: {text_file_name}")
+        if self.worker and hasattr(self.worker, 'log'):
+            self.worker.log(f"Saving file: {text_file_name}")
 
         # Save results to a file
         with open(text_file_name, "w") as file:
@@ -53,24 +66,27 @@ class AudioText():
         """
         Start a long-running task in a separate thread.
         """
- 
         try:
             long_running_task = self.process_file
             self.worker = ThreadWorker(
-                task_function=long_running_task, args=(args,))
+                task_function=long_running_task, args=(args,)
+            )
 
-            # self.worker.progress.connect()
-            self.worker.log.connect(self.__log_callback)
+            # Connect log callback if provided
+            if self.__log_callback:
+                self.worker.log.connect(self.__log_callback)
+
             self.worker.finished.connect(self.__result_callback)
             self.worker.error.connect(self.task_error)
 
             self.worker.start()
         except Exception as exc:
-            logging.info(f"{exc}")
+            logging.info(f"Error starting task: {exc}")
 
     def task_error(self, error_message):
         """
         Handle errors during task execution.
         """
-        self.worker.log.emit(f"Error: {error_message}")
+        if self.worker and hasattr(self.worker, 'log'):
+            self.worker.log.emit(f"Error: {error_message}")
         self.worker = None  # Cleanup the worker

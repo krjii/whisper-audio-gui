@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Whisper Open-ai Media GUI"
 authors = ["Kevin James <krjii@indyhustles.com>"]
 license = "BSD-3-Clause"
-readme = "README.rst"
+readme = "README.md"
 keywords = ["Whipser", "Open-AI"]
 classifiers = [
     "Programming Language :: Python :: 3.9",
@@ -17,10 +17,13 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
+requests = "*"
+filelock = "*"
 python = ">=3.9,<3.14"
-openai-whisper = "*"
 setuptools-rust = "*"
 pyside6 = "*"
+PyPubSub = "*"
+openai-whisper = "^20240930"
 
 [tool.poetry.scripts]
 my-script = "my_package.module:function"
